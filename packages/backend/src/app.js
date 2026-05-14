@@ -47,6 +47,7 @@ db.exec(`
     description TEXT,
     due_date DATE,
     completed BOOLEAN DEFAULT 0,
+    priority TEXT NOT NULL DEFAULT 'P3',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `);
@@ -89,14 +90,19 @@ app.get('/api/tasks', (req, res) => {
 });
 
 // POST /api/tasks (create)
+const VALID_PRIORITIES = ['P1', 'P2', 'P3'];
 app.post('/api/tasks', (req, res) => {
   try {
-    const { title, description, due_date } = req.body;
+    const { title, description, due_date, priority } = req.body;
     if (!title || typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({ error: 'Task title is required' });
     }
-    const stmt = db.prepare('INSERT INTO tasks (title, description, due_date) VALUES (?, ?, ?)');
-    const result = stmt.run(title, description || '', due_date || null);
+    const taskPriority = priority || 'P3';
+    if (!VALID_PRIORITIES.includes(taskPriority)) {
+      return res.status(400).json({ error: 'Priority must be P1, P2, or P3' });
+    }
+    const stmt = db.prepare('INSERT INTO tasks (title, description, due_date, priority) VALUES (?, ?, ?, ?)');
+    const result = stmt.run(title, description || '', due_date || null, taskPriority);
     const newTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(newTask);
   } catch (error) {
@@ -120,12 +126,16 @@ app.get('/api/tasks/:id', (req, res) => {
 // PUT /api/tasks/:id (edit)
 app.put('/api/tasks/:id', (req, res) => {
   try {
-    const { title, description, due_date } = req.body;
+    const { title, description, due_date, priority } = req.body;
     if (!title || typeof title !== 'string' || title.trim() === '') {
       return res.status(400).json({ error: 'Task title is required' });
     }
-    const stmt = db.prepare('UPDATE tasks SET title = ?, description = ?, due_date = ? WHERE id = ?');
-    const result = stmt.run(title, description || '', due_date || null, req.params.id);
+    const taskPriority = priority || 'P3';
+    if (!VALID_PRIORITIES.includes(taskPriority)) {
+      return res.status(400).json({ error: 'Priority must be P1, P2, or P3' });
+    }
+    const stmt = db.prepare('UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ? WHERE id = ?');
+    const result = stmt.run(title, description || '', due_date || null, taskPriority, req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: 'Task not found' });
     const updatedTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     res.json(updatedTask);
@@ -135,21 +145,27 @@ app.put('/api/tasks/:id', (req, res) => {
   }
 });
 
-// PATCH /api/tasks/:id (mark complete/incomplete)
+// PATCH /api/tasks/:id (mark complete/incomplete or update priority)
 app.patch('/api/tasks/:id', (req, res) => {
   try {
-    const { completed } = req.body;
-    if (typeof completed !== 'boolean') {
+    const { completed, priority } = req.body;
+    if (completed !== undefined && typeof completed !== 'boolean') {
       return res.status(400).json({ error: 'Completed must be boolean' });
     }
-    const stmt = db.prepare('UPDATE tasks SET completed = ? WHERE id = ?');
-    const result = stmt.run(completed ? 1 : 0, req.params.id);
-    if (result.changes === 0) return res.status(404).json({ error: 'Task not found' });
+    if (priority !== undefined && !VALID_PRIORITIES.includes(priority)) {
+      return res.status(400).json({ error: 'Priority must be P1, P2, or P3' });
+    }
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+    const newCompleted = completed !== undefined ? (completed ? 1 : 0) : task.completed;
+    const newPriority = priority !== undefined ? priority : task.priority;
+    db.prepare('UPDATE tasks SET completed = ?, priority = ? WHERE id = ?')
+      .run(newCompleted, newPriority, req.params.id);
     const updatedTask = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     res.json(updatedTask);
   } catch (error) {
-    console.error('Error updating task completion:', error);
-    res.status(500).json({ error: 'Failed to update task completion' });
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Failed to update task' });
   }
 });
 

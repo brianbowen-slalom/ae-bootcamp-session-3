@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  List, ListItem, ListItemText, IconButton, Checkbox, Typography, Box, CircularProgress, Paper, Chip
+  List, ListItem, ListItemText, IconButton, Button, Checkbox, Typography, Box, CircularProgress, Paper, Chip
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -61,6 +61,21 @@ function TaskList({ onEdit }) {
       fetchTasks();
     } catch (err) {
       setError('Failed to delete task');
+    }
+  };
+
+  const PRIORITIES = ['P1', 'P2', 'P3'];
+
+  const handlePriorityChange = async (task, priority) => {
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority })
+      });
+      fetchTasks();
+    } catch (err) {
+      setError('Failed to update priority');
     }
   };
 
@@ -127,7 +142,7 @@ function TaskList({ onEdit }) {
           <ListItem 
             key={task.id} 
             sx={{ 
-              pr: 18,
+              pr: 38,
               py: 1,
               mb: 1,
               borderRadius: 2,
@@ -203,6 +218,33 @@ function TaskList({ onEdit }) {
                 gap: 1
               }}
             >
+              {PRIORITIES.map(p => (
+                <Button
+                  key={p}
+                  size="small"
+                  variant="contained"
+                  onClick={() => handlePriorityChange(task, p)}
+                  sx={{
+                    minWidth: 36,
+                    px: 0.5,
+                    py: 0,
+                    height: 22,
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    borderRadius: 1,
+                    backgroundColor: task.priority === p ? '#07F2E6' : '#7A7A7A',
+                    color: task.priority === p ? '#000' : '#fff',
+                    '&:hover': {
+                      backgroundColor: task.priority === p ? '#07F2E6' : '#7A7A7A',
+                      opacity: 0.85,
+                    },
+                    boxShadow: 'none',
+                    textTransform: 'none',
+                  }}
+                >
+                  {p}
+                </Button>
+              ))}
               {task.due_date && (
                 <Chip
                   icon={<EventIcon sx={{ fontSize: 14 }} />}

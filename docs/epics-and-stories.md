@@ -1,0 +1,79 @@
+- Epic: MVP - Task Data Model
+	- Story: Add due date field to tasks
+		- Acceptance Criteria: Tasks support a due date field.
+		- Acceptance Criteria: The due date field is optional.
+		- Acceptance Criteria: When present, the due date uses ISO `YYYY-MM-DD` format.
+		- Acceptance Criteria: Invalid due date values are ignored and treated as absent.
+		- Technical Requirements: Extend the existing task object shape used by `packages/frontend/src/TaskForm.js`, `packages/frontend/src/App.js`, and `packages/frontend/src/TaskList.js` to continue carrying `due_date` values as strings.
+		- Technical Requirements: Keep the due date input implemented with the existing date field pattern in `packages/frontend/src/TaskForm.js` so browser-entered values remain in `YYYY-MM-DD` format.
+		- Technical Requirements: Reuse the existing date normalization behavior in `TaskForm` when loading tasks for edit so previously stored values render correctly in the form.
+		- Technical Requirements: Treat invalid due date values as empty before saving to client-side storage and before rendering due date UI in `TaskList`.
+	- Story: Add priority field to tasks
+		- Acceptance Criteria: Tasks support a priority field.
+		- Acceptance Criteria: Priority is limited to `P1`, `P2`, or `P3`.
+		- Acceptance Criteria: Priority defaults to `P3`.
+		- Technical Requirements: Add a priority input to `packages/frontend/src/TaskForm.js` and include `priority` in the task payload assembled by the existing `onSave` flow.
+		- Technical Requirements: Constrain selectable priority values in the frontend to `P1`, `P2`, and `P3` rather than accepting freeform text.
+		- Technical Requirements: Apply `P3` as the default value when initializing new tasks and when hydrating stored tasks that do not already include a priority.
+		- Technical Requirements: Preserve the current task field naming convention by adding `priority` alongside existing fields such as `title`, `description`, `due_date`, and `completed`.
+	- Story: Require title for each task
+		- Acceptance Criteria: Each task requires a title.
+		- Technical Requirements: Keep the existing required title validation in `packages/frontend/src/TaskForm.js` as the blocking validation before save.
+		- Technical Requirements: Keep save operations from writing tasks with empty or whitespace-only titles into client-side storage.
+
+- Epic: MVP - Task Presentation
+	- Story: Show priority badges on tasks
+		- Acceptance Criteria: Priority is displayed visually using color-coded badges.
+		- Technical Requirements: Extend `packages/frontend/src/TaskList.js` to render a priority badge in the same trailing metadata area that currently renders the due date chip.
+		- Technical Requirements: Implement a fixed visual mapping for `P1`, `P2`, and `P3` so each priority consistently renders with its own badge styling.
+		- Technical Requirements: Preserve existing completed-task styling and action controls when priority badges are added.
+
+- Epic: MVP - Task Filters
+	- Story: Add All filter view
+		- Acceptance Criteria: Users can view tasks in an `All` filter.
+		- Acceptance Criteria: Completed tasks are shown in the `All` view.
+		- Technical Requirements: Add filter state management in `packages/frontend/src/App.js` and pass the active filter into `TaskList`.
+		- Technical Requirements: Ensure the `All` filter uses the full locally stored task collection without excluding completed tasks.
+	- Story: Add Today filter view
+		- Acceptance Criteria: Users can view tasks in a `Today` filter.
+		- Acceptance Criteria: Completed tasks are hidden in the `Today` view.
+		- Technical Requirements: Implement date-based filtering in the frontend using the stored `due_date` string values rather than adding backend query behavior.
+		- Technical Requirements: Ensure the `Today` filter excludes tasks marked as completed before rendering.
+	- Story: Add Overdue filter view
+		- Acceptance Criteria: Users can view tasks in an `Overdue` filter.
+		- Acceptance Criteria: Completed tasks are hidden in the `Overdue` view.
+		- Technical Requirements: Implement overdue evaluation in the frontend by comparing incomplete tasks' `due_date` values against the current local date.
+		- Technical Requirements: Ensure the `Overdue` filter excludes tasks marked as completed before rendering.
+		- Technical Requirements: Add filter controls to the existing frontend UI without removing current edit, delete, or completion interactions.
+
+- Epic: MVP - Local-Only Scope
+	- Story: Keep task storage local
+		- Acceptance Criteria: Task storage remains local only.
+		- Technical Requirements: Replace the current fetch-based persistence in `packages/frontend/src/App.js` and `packages/frontend/src/TaskList.js` with browser-local persistence.
+		- Technical Requirements: Persist the task collection in the frontend so create, edit, complete, and delete operations survive page reloads without server calls.
+		- Technical Requirements: Store all task fields needed by the PRD in local persistence, including `title`, `description`, `due_date`, `priority`, and `completed`.
+	- Story: Keep implementation frontend-only
+		- Acceptance Criteria: No backend changes are made.
+		- Technical Requirements: Do not modify the Express or SQLite implementation in `packages/backend/src/app.js` for MVP delivery.
+		- Technical Requirements: Remove the frontend runtime dependency on `/api/tasks` endpoints for MVP behavior.
+		- Technical Requirements: Shift frontend tests in `packages/frontend/src/__tests__/App.test.js` away from backend API mocking where necessary so they validate the local-only behavior.
+
+- Epic: Post-MVP - Overdue Presentation
+	- Story: Visually highlight overdue tasks
+		- Acceptance Criteria: Overdue tasks are visually highlighted.
+		- Technical Requirements: Extend `packages/frontend/src/TaskList.js` item styling to apply a distinct overdue visual treatment without changing completion controls or task actions.
+		- Technical Requirements: Base overdue highlighting on the same overdue date calculation used by the `Overdue` filter.
+
+- Epic: Post-MVP - Task Sorting
+	- Story: Sort overdue tasks first
+		- Acceptance Criteria: Tasks are sorted with overdue tasks first.
+		- Technical Requirements: Add a deterministic frontend sort step before rendering tasks in `TaskList`.
+		- Technical Requirements: Evaluate overdue status before other sort comparisons.
+	- Story: Sort tasks by priority
+		- Acceptance Criteria: After overdue tasks, tasks are sorted by priority from `P1` to `P3`.
+		- Technical Requirements: Implement a fixed priority rank mapping in the frontend so `P1` sorts ahead of `P2`, and `P2` ahead of `P3`.
+	- Story: Sort tasks by due date
+		- Acceptance Criteria: After priority, tasks are sorted by due date in ascending order.
+		- Acceptance Criteria: Tasks without a due date are placed last.
+		- Technical Requirements: Compare valid `due_date` values in ascending order after overdue and priority comparisons.
+		- Technical Requirements: Treat missing or invalid due dates as unsorted-to-end values so undated tasks render last.

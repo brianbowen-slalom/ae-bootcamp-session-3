@@ -58,6 +58,27 @@ button:hover {
   background-color: #21a1c9;
 }
 
+/* Priority radio-style buttons */
+.priority-btn {
+  background-color: #7A7A7A;
+  color: #fff;
+}
+
+.priority-btn.selected {
+  background-color: #07F2E6;
+  color: #000;
+}
+
+.priority-btn:hover {
+  background-color: #7A7A7A;
+  opacity: 0.85;
+}
+
+.priority-btn.selected:hover {
+  background-color: #07F2E6;
+  opacity: 0.85;
+}
+
 ul {
   list-style-type: none;
   padding: 0;
